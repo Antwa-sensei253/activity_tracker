@@ -1,4 +1,4 @@
-# Activity Tracker Documentation
+# Activity Tracker
 
 ## Overview
 
