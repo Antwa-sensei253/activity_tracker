@@ -1,143 +1,99 @@
-# Activity Tracker
+# App Usage Tracker
 
 ## Overview
 
-The Activity Tracker is a Python script designed to monitor and log the active window on a user's computer, recording the time spent on each activity. This data is stored in a JSON file and can be visualized using matplotlib.
+The App Usage Tracker is a Python-based web application that monitors and logs the active windows on a user's computer, recording the time spent on each application. The collected data is stored in a JSON file and can be visualized in real-time through a web dashboard powered by Flask.
 
 ## Dependencies
 
 Ensure the following Python packages are installed:
 
-- `datetime`
-- `time`
-- `json`
-- `pywin32` (specifically `win32gui`)
-- `matplotlib`
+- `psutil`: Used for system and process utilities.
+- `flask`: Provides the web framework for creating the dashboard.
+- `json`: Handles reading and writing of JSON data.
+- `datetime`: Manages date and time operations.
+- `threading`: Allows tracking to run in a separate thread.
+- `pywin32` (specifically `win32gui`): Required for accessing the active window information on Windows.
 
 You can install the required packages using pip:
 
+
+
+
+
 ```sh
-pip install pywin32 matplotlib
+pip install psutil flask pywin32
+```
+
+## Directory Structure
+
+The project follows this directory structure:
+
+plaintext
+
+Copy code
+```sh
+app_tracker/ ├── app.py # Main Flask application 
+			├── templates/ # Directory for HTML templates
+			 │ └── index.html # Main dashboard HTML template
+			  ├── static/ # Directory for static files
+			  │ └── styles.css # Custom CSS styles
 ```
 
 ## Constants
 
-- `ACTIVITIES_FILE`: The filename for storing activity data. Default is `"activities.json"`.
+- `tracking_duration`: The duration for which the tracker runs, in seconds (default is 3600 seconds).
+- `report_interval`: The interval at which the tracker logs the active window, in seconds (default is 10 seconds).
+- `app_usage.json`: The filename where the app usage data is stored.
 
 ## Functions
 
-### `get_active_window_name()`
+### `get_active_window()`
 
-Returns the name of the currently active window.
+Retrieves the name of the currently active window on the user's computer. This function uses the `win32gui` library, which is specific to Windows.
 
-```sh
-def get_active_window_name():
-    """Returns the name of the currently active window."""
-    window = win32gui.GetForegroundWindow()
-    return win32gui.GetWindowText(window)
-```
+### `track_app_usage()`
 
-### `load_activities(filepath)`
+Tracks the active window and updates the `app_usage` dictionary with the time spent on each application. This function runs in a separate thread to allow continuous tracking.
 
-Loads activities from a JSON file. If the file does not exist or contains invalid JSON, it returns an empty dictionary.
+### `save_usage_to_json(app_usage, filename='app_usage.json')`
 
-```sh
-def load_activities(filepath):
-    """Loads activities from a JSON file."""
-    try:
-        with open(filepath, "r") as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
-```
+Saves the app usage data to a JSON file. This ensures that the data is persisted and can be loaded later.
 
-### `save_activities(filepath, activities)`
+### `signal_handler(sig, frame)`
 
-Saves the activities dictionary to a JSON file.
+Handles script interruptions (e.g., Ctrl+C) and ensures that the usage data is saved to the JSON file before the program exits.
 
-```sh
-def save_activities(filepath, activities):
-    """Saves activities to a JSON file."""
-    with open(filepath, "w") as f:
-        json.dump(activities, f, indent=4)
-```
+### `index()`
 
-### `add_time_entry(activities, activity_name, start_time, end_time)`
+Serves the main dashboard HTML template using Flask. This route renders the user interface for viewing the app usage data.
 
-Adds a time entry for a specific activity to the activities dictionary.
+### `data()`
 
-```sh
-def add_time_entry(activities, activity_name, start_time, end_time):
-    """Adds a time entry to the activities dictionary."""
-    if activity_name not in activities:
-        activities[activity_name] = []
-    activities[activity_name].append({
-        "start_time": start_time.strftime("%Y-%m-%d %H:%M:%S"),
-        "end_time": end_time.strftime("%Y-%m-%d %H:%M:%S"),
-        "duration": (end_time - start_time).total_seconds()
-    })
-```
+Provides the app usage data as a JSON response. This route is used by the frontend to fetch the latest app usage data and update the dashboard in real-time.
 
-### `plot_activities(activities)`
+## Running the Flask Application
 
-Plots the durations of the activities over time using matplotlib.
-```sh
-def plot_activities(activities):
-    """Plots the durations of the activities over time."""
-    num_activities = len(activities)
-    fig, axs = plt.subplots(1, num_activities, figsize=(15, 5))
+To run the App Usage Tracker, follow these steps:
 
-    if num_activities == 1:
-        axs = [axs]
+1. Navigate to the directory where `app.py` is located.
+    
+2. Start the Flask application by executing the following command:
 
-    for i, (activity_name, entries) in enumerate(activities.items()):
-        durations = [entry["duration"] / 3600 for entry in entries]
-        axs[i].hist(durations, alpha=0.8)
-        axs[i].set_title(activity_name)
-        axs[i].set_xlabel('Duration (hours)')
-        axs[i].set_ylabel('Frequency')
+    `python app.py`
+    
+3. Open your web browser and go to `http://127.0.0.1:5000/` to view the dashboard.
+    
 
-    plt.show()
-```
+## Dashboard
 
-### `track_activities()`
-
-Tracks the active window and records the time spent on each activity. Saves data periodically and plots the results when interrupted.
-
-```sh
-def track_activities():
-    """Tracks the active window and records time spent on each activity."""
-    activities = load_activities(ACTIVITIES_FILE)
-    active_window_name = ""
-    start_time = datetime.datetime.now() 
-
-    try:
-        while True:
-            new_window_name = get_active_window_name()
-            if new_window_name != active_window_name:
-                if active_window_name:
-                    end_time = datetime.datetime.now()
-                    add_time_entry(activities, active_window_name, start_time, end_time)
-                    save_activities(ACTIVITIES_FILE, activities)
-                active_window_name = new_window_name
-                start_time = datetime.datetime.now()
-            time.sleep(1)
-    except KeyboardInterrupt:
-        end_time = datetime.datetime.now()
-        add_time_entry(activities, active_window_name, start_time, end_time)
-        save_activities(ACTIVITIES_FILE, activities)
-        plot_activities(activities)
-```
-
-## Running the Script
-
-To run the Activity Tracker, execute the script from the command line:
-
-```sh
-python activity_tracker.py
-```
+The web dashboard, built with HTML and Bootstrap, provides a user-friendly interface for viewing the tracked application usage. It periodically fetches the latest data from the backend and displays it in a table format. The dashboard is styled using a custom CSS file to enhance its visual appeal.
 
 ## Notes
 
 - Ensure you have the necessary permissions to access and manipulate the active window information on your operating system.
-- The script is designed to work on Windows due to the use of `win32gui` for window management. Adaptations are required for other operating systems.
+- The script is designed to work on Windows due to the use of `win32gui` for window management. Adaptations are required for other operating systems if you want cross-platform support.
+
+## Contributing
+
+Contributions are welcome! If you have suggestions for improvements or new features, please open an issue or submit a pull request.
