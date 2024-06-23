@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Usage Tracker</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1 class="mt-5">App Usage Tracker</h1>
+        <div class="card mt-3">
+            <div class="card-body">
+                <h5 class="card-title">Tracked Applications</h5>
+                <table class="table table-striped" id="app-usage-table">
+                    <thead>
+                        <tr>
+                            <th>Application</th>
+                            <th>Start Time</th>
+                            <th>Total Time (seconds)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Data will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script>
+        function fetchAppUsageData() {
+            $.getJSON('/data', function(data) {
+                var tableBody = $('#app-usage-table tbody');
+                tableBody.empty();
+                $.each(data, function(app, details) {
+                    var row = '<tr><td>' + app + '</td><td>' + details.start_time + '</td><td>' + details.duration + '</td></tr>';
+                    tableBody.append(row);
+                });
+            });
+        }
+
+        $(document).ready(function() {
+            fetchAppUsageData();
+            setInterval(fetchAppUsageData, 10000); // Update every 10 seconds
+        });
+    </script>
+</body>
+</html>
